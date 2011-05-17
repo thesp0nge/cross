@@ -1,6 +1,12 @@
 = cross
 
-Description goes here.
+cross is a simple and easy to use cross site scripting spotting tool. The idea
+is to use capybara and hpricot to submit attack patterns to forms and read the
+payload in the resulting page.
+
+Having the result page full HTML understood my lead to have low false positives
+rate.
+
 
 == Contributing to cross
  
@@ -14,6 +20,6 @@ Description goes here.
 
 == Copyright
 
-Copyright (c) 2011 Paolo Perego. See LICENSE.txt for
+Copyright (c) 2011 Paolo Perego. See LICENSE for
 further details.
 
