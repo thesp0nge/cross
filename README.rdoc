@@ -1,7 +1,7 @@
 = cross
 
 cross is a simple and easy to use cross site scripting spotting tool. The idea
-is to use capybara and hpricot to submit attack patterns to forms and read the
+is to use mechanize and hpricot to submit attack patterns to forms and read the
 payload in the resulting page.
 
 Having the result page full HTML understood my lead to have low false positives
