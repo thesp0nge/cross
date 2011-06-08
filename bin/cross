@@ -13,17 +13,6 @@ ap "target: " + host.host
 engine = Cross::Engine.instance
 engine.start
 
-page = engine.agent.get(ARGV[0])
-page.forms.each do |f|
-  f.fields.each do |ff|
-    ff.value = "<script>alert('cross canary');</script>"
-  end
-  pp = engine.agent.submit(f)
-  scripts = pp.search("//script")
-  scripts.each do |sc|
-    if sc.children.text == "alert('cross canary');"
-      ap "Canary found in output page. Suspected XSS"
-    end
-  end
-  # ap pp.body
+if engine.inject(ARGV[0])
+  ap "Canary found in output page. Suspected XSS"
 end
