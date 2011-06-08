@@ -1,12 +1,29 @@
 = cross
 
 cross is a simple and easy to use cross site scripting spotting tool. The idea
-is to use mechanize and hpricot to submit attack patterns to forms and read the
-payload in the resulting page.
+is to use mechanize to submit attack patterns to forms and read the
+payload in the resulting page using nokogiri and xpath queries.
 
 Having the result page full HTML understood my lead to have low false positives
 rate.
 
+== Version
+
+current cross version is: 0.0.0
+
+== Wishlist
+
+cross latest goal is automate the search for XSS in a web application, providing APIs for being called by other tools.
+
+To accomplish this, I'd like to add in the very near future:
+
+* honoring sitemap.xml - given the web application URL, if the sitemap.xml has
+  been found, cross will limit the scan in this link list (you'll be able to
+  override this, I'll introduce it to limit the impact of crawling a website
+  when URLs are dynamically generated).
+* save file in a SQL form - cross will be ORM agnostic, I'll provide a SQLite3 driver as default.
+* HTML5 & CSS3 reporting - even hackers want good looking web2.0 reports
+* ...
 
 == Contributing to cross
  
