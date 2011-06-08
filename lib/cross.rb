@@ -9,8 +9,14 @@ agent.user_agent_alias = 'Mac Safari'
 page = agent.get(ARGV[0])
 page.forms.each do |f|
   f.fields.each do |ff|
-    ff.value = "<script>alert('xss');</script>"
+    ff.value = "<script>alert('cross canary');</script>"
   end
   pp = agent.submit(f)
-  ap pp.body
+  scripts = pp.search("//script")
+  scripts.each do |sc|
+    if sc.children.text == "alert('cross canary');"
+      ap "Canary found in output page. Suspected XSS"
+    end
+  end
+  # ap pp.body
 end
