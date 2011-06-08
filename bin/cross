@@ -5,17 +5,20 @@ require 'ap'
 require 'logger'
 require 'cross'
 
-@uri = URI.parse(ARGV[0])
-ap Cross::Version.version
-ap "cross (C) 2011 - thesp0nge: visiting " + @uri.host
-agent = Mechanize.new {|a| a.log = Logger.new("cross.log")}
-agent.user_agent_alias = 'Mac Safari'
-page = agent.get(ARGV[0])
+
+host = Cross::Host.new(ARGV[0])
+ap "cross " + Cross::Version.version[:string] + " (C) 2011 - thesp0nge"
+ap "target: " + host.host
+
+engine = Cross::Engine.instance
+engine.start
+
+page = engine.agent.get(ARGV[0])
 page.forms.each do |f|
   f.fields.each do |ff|
     ff.value = "<script>alert('cross canary');</script>"
   end
-  pp = agent.submit(f)
+  pp = engine.agent.submit(f)
   scripts = pp.search("//script")
   scripts.each do |sc|
     if sc.children.text == "alert('cross canary');"
