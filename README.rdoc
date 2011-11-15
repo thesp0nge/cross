@@ -7,6 +7,7 @@ payload in the resulting page using nokogiri and xpath queries.
 Having the result page full HTML understood my lead to have low false positives
 rate.
 
+{<img src="http://travis-ci.org/thesp0nge/cross.png" />}[http://travis-ci.org/thesp0nge/cross.png]]
 == Version
 
 current cross version is: 0.0.0
