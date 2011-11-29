@@ -3,7 +3,7 @@ source "http://rubygems.org"
 gem "rest-open-uri"
 gem "mechanize"
 gem "awesome_print"
-gem 'rake', '0.8.7'
+gem 'rake'#, '0.8.7'
 # Add dependencies required to use your gem here.
 # Example:
 #   gem "activesupport", ">= 2.3.5"
