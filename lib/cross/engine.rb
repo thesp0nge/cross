@@ -34,7 +34,7 @@ module Cross
         # You ask to exploit the url, so I won't check for form values
 
         Cross::Attack::XSS.each do |pattern|
-          page = agent.get(url+pattern)
+          page = @agent.get(url+pattern)
 
           scripts = page.search("//script")
           scripts.each do |sc|
