@@ -25,7 +25,7 @@ module Cross
         start
       end
 
-      if ! @options[:auth].empty 
+      if ! @options[:auth].nil?  and ! @options[:auth].empty? 
         @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password])
       end
 
