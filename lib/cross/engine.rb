@@ -11,20 +11,26 @@ module Cross
     include Singleton
 
     attr_reader :agent
+    attr_accessor :options
 
     # Starts the engine
-    def start
+    def start(options={:exploit_url=>false, :debug=>false, :auth=>{}})
       @agent = Mechanize.new {|a| a.log = Logger.new("cross.log")}
       @agent.user_agent_alias = 'Mac Safari'
+      @options = options
     end 
 
-    def inject(url, options={:exploit_url=>false, :debug=>false})
+    def inject(url)
       if @agent.nil?
         start
       end
 
+      if ! @options[:auth].empty 
+        @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password])
+      end
+
       found = false
-      if options[:exploit_url]
+      if @options[:exploit_url]
         # You ask to exploit the url, so I won't check for form values
 
         Cross::Attack::XSS.each do |pattern|
@@ -35,7 +41,7 @@ module Cross
             if sc.children.text.include?("alert('cross canary');")
               found = true
             end
-            if options[:debug]
+            if @options[:debug]
               @agent.log.debug(sc.children.text)
             end
           end
