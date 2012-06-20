@@ -16,6 +16,7 @@ Gem::Specification.new do |gem|
   gem.version       = Cross::VERSION
 
 
-gem.add_dependency "rest-open-uri"
-gem.add_dependency "mechanize"
+  gem.add_dependency "rake"
+  gem.add_dependency "rest-open-uri"
+  gem.add_dependency "mechanize"
 end
