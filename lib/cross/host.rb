@@ -5,8 +5,8 @@ module Cross
     def initialize(uri)
       begin
         my_uri = URI.parse(uri)
-        @host = uri.host
-        @port = uri.port
+        @host = my_uri.host
+        @port = my_uri.port
       rescue 
         @host = nil
         @port = nil
