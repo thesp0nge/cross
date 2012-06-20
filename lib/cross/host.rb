@@ -4,13 +4,12 @@ module Cross
 
     def initialize(uri)
       begin
-        uri = URI.parse(ARGV[0])
+        my_uri = URI.parse(uri)
         @host = uri.host
         @port = uri.port
       rescue 
         @host = nil
         @port = nil
-        ap 'Malformed host: ' + ARGV[0]
       end
     end
   end
