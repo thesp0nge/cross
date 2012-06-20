@@ -2,6 +2,8 @@ require 'mechanize'
 require 'logger'
 require 'singleton'
 
+require 'cross/xss'
+
 module Cross
   # Engine is the cross class using Mechanize to inject canary and check for
   # output
@@ -17,32 +19,28 @@ module Cross
     end 
 
     def inject(url, options={:exploit_url=>false, :debug=>false})
+      if @agent.nil?
+        start
+      end
+
       found = false
       if options[:exploit_url]
         # You ask to exploit the url, so I won't check for form values
 
-        page = @agent.get(url+"<script>alert('cross canary');</script>")
-        scripts = page.search("//script")
-        scripts.each do |sc|
-          if sc.children.text == "alert('cross canary');"
-            found = true
+        Cross::Attack::XSS.each do |pattern|
+          page = agent.get(url+pattern)
+
+          scripts = page.search("//script")
+          scripts.each do |sc|
+            if sc.children.text.include?("alert('cross canary');")
+              found = true
+            end
+            if options[:debug]
+              @agent.log.debug(sc.children.text)
+            end
           end
-        end
 
-        if options[:debug]
-          @agent.log.debug(page.body)
-        end
-
-        page = @agent.get(url+"/--><script>alert('cross canary');</script>")
-        scripts = page.search("//script")
-        scripts.each do |sc|
-          if sc.children.text == "alert('cross canary');"
-            found = true
-          end
-        end
-
-        if options[:debug]
-          @agent.log.debug(page.body)
+          puts "GET #{url+pattern}: #{found}"
         end
 
       else
