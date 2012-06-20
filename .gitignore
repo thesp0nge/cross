@@ -1,4 +1,5 @@
 *.swp
+cross.log
 *.gem
 *.rbc
 .bundle

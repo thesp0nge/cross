@@ -1,3 +1,5 @@
+require 'mechanize'
+require 'logger'
 require 'singleton'
 
 module Cross
@@ -28,7 +30,7 @@ module Cross
         end
 
         if options[:debug]
-          puts page.body
+          @agent.log.debug(page.body)
         end
 
         page = @agent.get(url+"/--><script>alert('cross canary');</script>")
@@ -40,7 +42,7 @@ module Cross
         end
 
         if options[:debug]
-          puts page.body
+          @agent.log.debug(page.body)
         end
 
       else

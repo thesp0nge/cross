@@ -20,4 +20,5 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency "rspec"
   gem.add_dependency "rest-open-uri"
   gem.add_dependency "mechanize"
+  gem.add_dependency "logger"
 end
