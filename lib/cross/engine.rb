@@ -17,6 +17,7 @@ module Cross
     def start(options={:exploit_url=>false, :debug=>false, :auth=>{}})
       @agent = Mechanize.new {|a| a.log = Logger.new("cross.log")}
       @agent.user_agent_alias = 'Mac Safari'
+      @agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       @options = options
     end 
 
