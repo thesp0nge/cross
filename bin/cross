@@ -8,13 +8,10 @@ require 'logger'
 require 'cross'
 
 
-host = Cross::Host.new(ARGV[0])
-ap "cross " + Cross::Version.version[:string] + " (C) 2011 - thesp0nge"
-ap "target: " + host.host
+ap "cross " + Cross::VERSION + " (C) 2011, 2012 - paolo@armoredcode.com"
 
 engine = Cross::Engine.instance
 engine.start
 
-if engine.inject(ARGV[0])
-  ap "Canary found in output page. Suspected XSS"
-end
+raise "cross: missing target" if ARGV[0].nil?
+ap "Canary found in output page. Suspected XSS" if engine.inject(ARGV[0])
