@@ -37,6 +37,9 @@ module Cross
         Cross::Attack::XSS.each do |pattern|
           page = @agent.get(url+pattern)
 
+          if @options[:debug]
+            @agent.log.debug(page.body)
+          end
           scripts = page.search("//script")
           scripts.each do |sc|
             if sc.children.text.include?("alert('cross canary');")

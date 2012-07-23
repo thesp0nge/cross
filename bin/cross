@@ -1,17 +1,44 @@
 #!/usr/bin/env ruby
 
-$LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__) + '/../lib'))
-
-require 'mechanize'
-require 'ap'
+require 'rainbow'
 require 'logger'
+require 'mechanize'
 require 'cross'
+require 'getoptlong'
 
+opts = GetoptLong.new(
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--version', '-v', GetoptLong::NO_ARGUMENT ],
+  ['--debug', '-D', GetoptLong::NO_ARGUMENT ],
+  ['--exploit-url', '-u', GetoptLong::NO_ARGUMENT]
+)
+trap("INT") { puts '['+'INTERRUPTED'.color(:red)+']'; exit -1 }
 
-ap "cross " + Cross::VERSION + " (C) 2011, 2012 - paolo@armoredcode.com"
+options={:exploit_url=>false, :debug=>false}
+
+opts.each do |opt, arg| 
+  case opt
+  when '--help'
+    puts "usage: cross [-uDhv] target"
+    puts "     -u: exploits the URL string instead of looking at the form values"
+    puts "     -D: turns debug on"
+    puts "     -v: shows version"
+    puts "     -h: this help"
+    exit 0
+  when '--version'
+    puts "cross " + Cross::VERSION
+    exit 0
+   when '--debug'
+     options[:debug]=true
+   when '--exploit-url'
+     options[:exploit_url]=true
+  end
+end
+
+puts "cross " + Cross::VERSION + " (C) 2011, 2012 - paolo@armoredcode.com"
 
 engine = Cross::Engine.instance
-engine.start
+engine.start(options)
 
-raise "cross: missing target" if ARGV[0].nil?
-ap "Canary found in output page. Suspected XSS" if engine.inject(ARGV[0])
+raise "cross: missing target" if ARGV.length != 1
+puts "Canary found in output page. Suspected XSS" if engine.inject(ARGV.shift)
