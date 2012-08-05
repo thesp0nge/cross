@@ -10,11 +10,13 @@ opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
   [ '--version', '-v', GetoptLong::NO_ARGUMENT ],
   ['--debug', '-D', GetoptLong::NO_ARGUMENT ],
-  ['--exploit-url', '-u', GetoptLong::NO_ARGUMENT]
+  ['--exploit-url', '-u', GetoptLong::NO_ARGUMENT],
+  ['--user', '-U', GetoptLong::REQUIRED_ARGUMENT],
+  ['--password', '-P', GetoptLong::REQUIRED_ARGUMENT]
 )
 trap("INT") { puts '['+'INTERRUPTED'.color(:red)+']'; exit -1 }
 
-options={:exploit_url=>false, :debug=>false}
+options={:exploit_url=>false, :debug=>false, :auth=>{:username=>nil, :password=>nil}}
 
 opts.each do |opt, arg| 
   case opt
@@ -32,6 +34,10 @@ opts.each do |opt, arg|
      options[:debug]=true
    when '--exploit-url'
      options[:exploit_url]=true
+   when '--user'
+     options[:auth][:username]=arg
+   when '--password'
+     options[:auth][:password]=arg
   end
 end
 

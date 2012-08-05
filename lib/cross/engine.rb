@@ -13,6 +13,10 @@ module Cross
     attr_reader :agent
     attr_accessor :options
 
+    def debug?
+      @options[:debug]
+    end
+
     # Starts the engine
     def start(options={:exploit_url=>false, :debug=>false, :auth=>{}})
       @agent = Mechanize.new {|a| a.log = Logger.new("cross.log")}
@@ -22,8 +26,10 @@ module Cross
     end 
 
     def inject(url)
-      if @agent.nil?
-        start
+      start if @agent.nil?
+
+      if debug?
+        puts "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}"
       end
 
       if ! @options[:auth].nil?  and ! @options[:auth].empty? 
@@ -34,27 +40,37 @@ module Cross
       if @options[:exploit_url]
         # You ask to exploit the url, so I won't check for form values
 
+        attack_url = Cross::Url.new(url)
+
         Cross::Attack::XSS.each do |pattern|
-          page = @agent.get(url+pattern)
+          attack_url.params.each do |par|
 
-          if @options[:debug]
-            @agent.log.debug(page.body)
-          end
-          scripts = page.search("//script")
-          scripts.each do |sc|
-            if sc.children.text.include?("alert('cross canary');")
-              found = true
-            end
-            if @options[:debug]
-              @agent.log.debug(sc.children.text)
-            end
-          end
+            page = @agent.get(attack_url.fuzz(par[:name],pattern))
+            @agent.log.debug(page.body) if debug?
 
-          puts "GET #{url+pattern}: #{found}"
+            scripts = page.search("//script")
+            scripts.each do |sc|
+              found = true if sc.children.text.include?("alert('cross canary');")
+              @agent.log.debug(sc.children.text) if @options[:debug]
+            end
+
+            puts "GET #{attack_url.to_s}: #{found}"
+          attack_url.reset
+          end
         end
 
       else
-        page = @agent.get(url)
+        begin
+          page = @agent.get(url)
+        rescue Mechanize::UnauthorizedError
+          puts 'Authentication failed. Giving up.'
+          return false
+        end
+
+        if debug?
+          puts "#{page.forms.size} form(s) found"
+        end
+
         page.forms.each do |f|
           f.fields.each do |ff|
             ff.value = "<script>alert('cross canary');</script>"
