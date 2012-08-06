@@ -25,6 +25,22 @@ module Cross
       @options = options
     end 
 
+    def authenticate?
+      ! @options[:auth].nil?  and ! @options[:auth].empty? 
+    end
+
+    def crawl(url, deep)
+      return url if deep == 0
+      links = []
+      @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
+      page=@agent.get(url)
+      page.links.each do |l|
+        links << crawl(l.href, deep - 1 )
+      end
+
+      links
+    end
+
     def inject(url)
       start if @agent.nil?
 
@@ -32,9 +48,7 @@ module Cross
         puts "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}"
       end
 
-      if ! @options[:auth].nil?  and ! @options[:auth].empty? 
-        @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password])
-      end
+      @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
 
       found = false
       if @options[:exploit_url]
@@ -55,7 +69,7 @@ module Cross
             end
 
             puts "GET #{attack_url.to_s}: #{found}"
-          attack_url.reset
+            attack_url.reset
           end
         end
 
@@ -76,6 +90,7 @@ module Cross
             ff.value = "<script>alert('cross canary');</script>"
           end
           pp = @agent.submit(f)
+          puts "#{pp.body}" if debug?
           scripts = pp.search("//script")
           scripts.each do |sc|
             if sc.children.text == "alert('cross canary');"
