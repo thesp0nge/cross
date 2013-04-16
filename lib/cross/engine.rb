@@ -29,16 +29,29 @@ module Cross
       ! @options[:auth].nil?  and ! @options[:auth].empty? 
     end
 
-    def crawl(url, deep)
-      return url if deep == 0
+    def crawl?
+      @options[:crawl][:enabled]
+    end
+
+    def crawl(url)
+      start if @agent.nil?
+
       links = []
       @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
-      page=@agent.get(url)
-      page.links.each do |l|
-        links << crawl(l.href, deep - 1 )
+      begin 
+        page=@agent.get(url)
+        page=@agent.get(url) if authenticate?
+        page.links.each do |l|
+          @agent.log.debug("Link found: #{l.href}") if debug?
+          links << l.href
+        end
+      rescue Mechanize::UnauthorizedError
+        return {:status=>'KO', :links=>[], :message=>'target website requires authentication'}
+      rescue => e 
+        return {:status=>'KO', :links=>links, :message=>e.to_s}
       end
 
-      links
+      return {:status=>'OK', :links=>links, :message=>''}
     end
 
     def inject(url)
@@ -64,11 +77,10 @@ module Cross
 
             scripts = page.search("//script")
             scripts.each do |sc|
-              found = true if sc.children.text.include?("alert('cross canary');")
+              found = true if sc.children.text.include?("alert('cross canary')")
               @agent.log.debug(sc.children.text) if @options[:debug]
             end
 
-            puts "GET #{attack_url.to_s}: #{found}"
             attack_url.reset
           end
         end
@@ -79,11 +91,12 @@ module Cross
         rescue Mechanize::UnauthorizedError
           puts 'Authentication failed. Giving up.'
           return false
+        rescue Mechanize::ResponseCodeError
+          puts 'Server gave back 404. Giving up.'
+          return false
         end
 
-        if debug?
-          puts "#{page.forms.size} form(s) found"
-        end
+        puts "#{page.forms.size} form(s) found" if debug?
 
         page.forms.each do |f|
           f.fields.each do |ff|
