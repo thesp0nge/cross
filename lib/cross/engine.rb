@@ -77,8 +77,8 @@ module Cross
 
             scripts = page.search("//script")
             scripts.each do |sc|
-              found = true if sc.children.text.include?("alert('cross canary')")
-              @agent.log.debug(sc.children.text) if @options[:debug]
+              puts(page.body) if @options[:debug] if sc.children.text.include?("alert('cross canary')")
+              return true if sc.children.text.include?("alert('cross canary')")
             end
 
             attack_url.reset
