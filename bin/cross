@@ -7,6 +7,9 @@ require 'cross'
 require 'getoptlong'
 require 'codesake-commons'
 
+$logger = Codesake::Commons::Logging.instance
+$logger.toggle_syslog
+
 opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
   [ '--version', '-v', GetoptLong::NO_ARGUMENT ],
@@ -19,11 +22,16 @@ opts = GetoptLong.new(
   ['--user', '-U', GetoptLong::REQUIRED_ARGUMENT ],
   ['--password', '-P', GetoptLong::REQUIRED_ARGUMENT ]
 )
-trap("INT") { puts '['+'INTERRUPTED'.color(:red)+']'; exit -1 }
+trap("INT") { $logger.die "SIGINT detected. Giving up" }
 
-options={:exploit_url=>false, :debug=>false, :oneshot=>false, :sample_post=>"", :parameter_to_tamper=>"", :crawl=>{:enabled=>false, :url_prefix=>nil}, :auth=>{:username=>nil, :password=>nil}}
-$logger = Codesake::Commons::Logging.instance
-$logger.toggle_syslog
+options = {:exploit_url=>false, 
+  :debug=>false, 
+  :oneshot=>false, 
+  :sample_post=>"", 
+  :parameter_to_tamper=>"", 
+  :crawl=>{:enabled=>false, :url_prefix=>nil}, 
+  :auth=>{:username=>nil, :password=>nil}
+}
 
 opts.each do |opt, arg| 
   case opt
