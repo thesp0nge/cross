@@ -126,6 +126,12 @@ module Cross
             scripts.each do |sc|
               return true if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
             end
+
+            # This is for input html field javascript event evasion
+            inputs = pp.search("//input")
+            inputs.each do |input|
+              return true if ! input['onmouseover'].nil? && input['onmouseover'].include?("alert(#{Cross::Attack::XSS::CANARY})") 
+            end
           end 
           return false if options[:oneshot]
         end
