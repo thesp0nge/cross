@@ -5,11 +5,15 @@ require 'logger'
 require 'mechanize'
 require 'cross'
 require 'getoptlong'
+require 'codesake-commons'
 
 opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
   [ '--version', '-v', GetoptLong::NO_ARGUMENT ],
   ['--debug', '-D', GetoptLong::NO_ARGUMENT ],
+  ['--oneshot', '-1', GetoptLong::NO_ARGUMENT ],
+  ['--sample-post', '-S', GetoptLong::REQUIRED_ARGUMENT ],
+  ['--tamper', '-t', GetoptLong::REQUIRED_ARGUMENT ],
   ['--exploit-url', '-u', GetoptLong::NO_ARGUMENT ],
   ['--crawl', '-c', GetoptLong::OPTIONAL_ARGUMENT ], 
   ['--user', '-U', GetoptLong::REQUIRED_ARGUMENT ],
@@ -17,7 +21,9 @@ opts = GetoptLong.new(
 )
 trap("INT") { puts '['+'INTERRUPTED'.color(:red)+']'; exit -1 }
 
-options={:exploit_url=>false, :debug=>false, :crawl=>{:enabled=>false, :url_prefix=>nil}, :auth=>{:username=>nil, :password=>nil}}
+options={:exploit_url=>false, :debug=>false, :oneshot=>false, :sample_post=>"", :parameter_to_tamper=>"", :crawl=>{:enabled=>false, :url_prefix=>nil}, :auth=>{:username=>nil, :password=>nil}}
+$logger = Codesake::Commons::Logging.instance
+$logger.toggle_syslog
 
 opts.each do |opt, arg| 
   case opt
@@ -29,40 +35,55 @@ opts.each do |opt, arg|
     puts "     -h: this help"
     exit 0
   when '--version'
-    puts "cross " + Cross::VERSION
+    puts "cross " + Cross::VERSION + " (C) 2011, 2012 - paolo@armoredcode.com"
     exit 0
-   when '--debug'
-     options[:debug]=true
-   when '--exploit-url'
-     options[:exploit_url]=true
+  when '--oneshot'
+    options[:oneshot] = true
+  when '--tamper'
+    # This option force cross to tamper only the specified form field
+    options[:parameter_to_tamper] = arg unless arg.nil?
+  when '--sample-post' 
+    options[:sample_post] = arg unless File.exist?(arg)
+    options[:sample_post] = File.read(arg) if File.exist?(arg) && File.readable?(arg)
+  when '--debug'
+    options[:debug]=true
+  when '--exploit-url'
+    options[:exploit_url]=true
 
-   when '--crawl'
-     options[:crawl][:enabled]=true
-     options[:crawl][:url_prefix] = arg unless arg.nil?
-   when '--user'
-     options[:auth][:username]=arg
-   when '--password'
-     options[:auth][:password]=arg
+  when '--crawl'
+    options[:crawl][:enabled]=true
+    options[:crawl][:url_prefix] = arg unless arg.nil?
+  when '--user'
+    options[:auth][:username]=arg
+  when '--password'
+    options[:auth][:password]=arg
   end
 end
 
-puts "cross " + Cross::VERSION + " (C) 2011, 2012 - paolo@armoredcode.com"
+$logger.helo "cross " + Cross::VERSION + " is starting up"
 
 engine = Cross::Engine.instance
 engine.start(options)
 
-raise "cross: missing target" if ARGV.length != 1
+found = false
+$logger.die "missing target" if ARGV.length != 1
+$logger.die "-S and -t flag must be used together" if (options[:sample_post].empty? && ! options[:parameter_to_tamper].empty?) or (! options[:sample_post].empty? && options[:parameter_to_tamper].empty?)
+
 if engine.crawl?
   result = engine.crawl(ARGV.shift)
-  if result[:status] == 'KO'
-    puts result[:message]
-    exit -1
-  end
+  $logger.die result[:message] if result[:status] == 'KO'
+
   
   result[:links].each do |l|
-    puts "Exploiting: #{options[:crawl][:url_prefix]+l}"
-    puts "Canary found in output page. Suspected XSS" if engine.inject(options[:crawl][:url_prefix]+l)
+    $logger.log "Exploiting: #{options[:crawl][:url_prefix]+l}"
+
+    found = engine.inject(options[:crawl][:url_prefix]+l) 
+    $logger.ok "Canary found in output page. Suspected XSS" if found
   end
 else
-  puts "Canary found in output page. Suspected XSS" if engine.inject(ARGV.shift)
+  found = engine.inject(ARGV.shift)
+  $logger.ok "Canary found in output page. Suspected XSS" if found
 end
+
+$logger.err "Canary not found" if ! found
+$logger.helo "cross is leaving"

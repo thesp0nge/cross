@@ -57,9 +57,7 @@ module Cross
     def inject(url)
       start if @agent.nil?
 
-      if debug?
-        puts "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}"
-      end
+      $logger.log "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}" if debug?
 
       @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
 
@@ -77,9 +75,11 @@ module Cross
 
             scripts = page.search("//script")
             scripts.each do |sc|
-              puts(page.body) if @options[:debug] if sc.children.text.include?("alert('cross canary')")
+              $logger.log(page.body) if @options[:debug] if sc.children.text.include?("alert('cross canary')")
               return true if sc.children.text.include?("alert('cross canary')")
             end
+
+            return false if options[:oneshot]
 
             attack_url.reset
           end
@@ -89,31 +89,62 @@ module Cross
         begin
           page = @agent.get(url)
         rescue Mechanize::UnauthorizedError
-          puts 'Authentication failed. Giving up.'
+          $logger.err 'Authentication failed. Giving up.'
           return false
         rescue Mechanize::ResponseCodeError
-          puts 'Server gave back 404. Giving up.'
+          $logger.err 'Server gave back 404. Giving up.'
+          return false
+        rescue Net::HTTP::Persistent::Error => e
+          $logger.err e.message
           return false
         end
 
-        puts "#{page.forms.size} form(s) found" if debug?
+        $logger.log "#{page.forms.size} form(s) found" if debug?
 
-        page.forms.each do |f|
-          f.fields.each do |ff|
-            ff.value = "<script>alert('cross canary');</script>"
-          end
-          pp = @agent.submit(f)
-          puts "#{pp.body}" if debug?
-          scripts = pp.search("//script")
-          scripts.each do |sc|
-            if sc.children.text == "alert('cross canary');"
-              found = true
+        Cross::Attack::XSS.each do |pattern|
+
+          $logger.log "using attack vector: #{pattern}" if debug?
+
+
+          page.forms.each do |f|
+            f.fields.each do |ff|
+              if  options[:sample_post].empty?
+                ff.value = pattern if options[:parameter_to_tamper].empty?
+                ff.value = pattern if ! options[:parameter_to_tamper].empty? && ff.name==options[:parameter_to_tamper]
+              else
+                ff.value = find_sample_value_for(options[:sample_post], ff.name) unless ff.name==options[:parameter_to_tamper]
+                ff.value = pattern if ff.name==options[:parameter_to_tamper]
+
+
+                # promo=Promo1&codice=&nome=&cognome=&indirizzo=%3Cscript%3Ealert%28%27cross+canary%27%29%3C%2Fscript%3E&comune=&CAP=&provincia=&num1=&num2=&mail=&codfisc=&fase=1
+              end
             end
-          end
-        end 
+
+            pp = @agent.submit(f)
+            $logger.log "header: #{pp.header}" if debug? && ! pp.header.empty?
+            $logger.log "body: #{pp.body}" if debug? && ! pp.body.empty?
+            $logger.err "Page is empty" if pp.body.empty?
+            scripts = pp.search("//script")
+            scripts.each do |sc|
+              return true if sc.children.text.include?("alert('cross canary')")
+            end
+          end 
+          return false if options[:oneshot]
+        end
       end
       found
     end
 
+
+    private
+    def find_sample_value_for(sample, name)
+      v=sample.split('&')
+      v.each do |post_param|
+        post_param_v = post_param.split('=')
+        return post_param_v[1] if post_param_v[0] == name
+      end
+
+      return ""
+    end
   end
 end

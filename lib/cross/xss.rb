@@ -15,6 +15,7 @@ module Cross
           "//;-->alert('cross canary');",
           "\"//;\nalert('cross canary')",
           "\"//;\nalert('cross canary');",
+          " onmouseover=alert('1');",
           # more exotic vectors (antisnatchor's collection)
           "<script/anyjunk>alert('cross canary')</script>",
           "<<script>alert('cross canary');//<</script>",

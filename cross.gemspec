@@ -22,4 +22,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency "mechanize"
   gem.add_dependency "logger"
   gem.add_dependency "rainbow"
+
+  gem.add_dependency "codesake-commons"
 end
