@@ -75,8 +75,8 @@ module Cross
 
             scripts = page.search("//script")
             scripts.each do |sc|
-              $logger.log(page.body) if @options[:debug] if sc.children.text.include?("alert('cross canary')")
-              return true if sc.children.text.include?("alert('cross canary')")
+              $logger.log(page.body) if @options[:debug] if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
+              return true if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
             end
 
             return false if options[:oneshot]
@@ -115,8 +115,6 @@ module Cross
                 ff.value = find_sample_value_for(options[:sample_post], ff.name) unless ff.name==options[:parameter_to_tamper]
                 ff.value = pattern if ff.name==options[:parameter_to_tamper]
 
-
-                # promo=Promo1&codice=&nome=&cognome=&indirizzo=%3Cscript%3Ealert%28%27cross+canary%27%29%3C%2Fscript%3E&comune=&CAP=&provincia=&num1=&num2=&mail=&codfisc=&fase=1
               end
             end
 
@@ -126,7 +124,7 @@ module Cross
             $logger.err "Page is empty" if pp.body.empty?
             scripts = pp.search("//script")
             scripts.each do |sc|
-              return true if sc.children.text.include?("alert('cross canary')")
+              return true if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
             end
           end 
           return false if options[:oneshot]
