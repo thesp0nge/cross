@@ -1,6 +1,7 @@
 require 'mechanize'
 require 'logger'
 require 'singleton'
+require 'URI'
 
 require 'cross/xss'
 
@@ -10,16 +11,25 @@ module Cross
   class Engine
     include Singleton
 
-    attr_reader :agent
+    attr_reader   :agent
     attr_accessor :options
+    attr_reader   :results
 
     def debug?
       @options[:debug]
     end
 
+    def create_log_filename(target)
+      begin
+        return "cross_#{URI.parse(target).hostname.gsub('.', '_')}_#{Time.now.strftime("%Y%m%d")}.log"
+      rescue
+        return "cross_#{Time.now.strftime("%Y%m%d")}.log"
+      end
+    end
+
     # Starts the engine
-    def start(options={:exploit_url=>false, :debug=>false, :auth=>{}})
-      @agent = Mechanize.new {|a| a.log = Logger.new("cross.log")}
+    def start(options = {:exploit_url=>false, :debug=>false, :oneshot=>false, :sample_post=>"", :parameter_to_tamper=>"", :auth=>{:username=>nil, :password=>nil}, :target=>""})
+      @agent = Mechanize.new {|a| a.log = Logger.new(create_log_filename(option[:target]))}
       @agent.user_agent_alias = 'Mac Safari'
       @agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       @options = options
@@ -29,30 +39,26 @@ module Cross
       ! @options[:auth].nil?  and ! @options[:auth].empty? 
     end
 
-    def crawl?
-      @options[:crawl][:enabled]
-    end
+    # def crawl(url)
+    #   start if @agent.nil?
 
-    def crawl(url)
-      start if @agent.nil?
+    #   links = []
+    #   @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
+    #   begin 
+    #     page=@agent.get(url)
+    #     page=@agent.get(url) if authenticate?
+    #     page.links.each do |l|
+    #       @agent.log.debug("Link found: #{l.href}") if debug?
+    #       links << l.href
+    #     end
+    #   rescue Mechanize::UnauthorizedError
+    #     return {:status=>'KO', :links=>[], :message=>'target website requires authentication'}
+    #   rescue => e 
+    #     return {:status=>'KO', :links=>links, :message=>e.to_s}
+    #   end
 
-      links = []
-      @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
-      begin 
-        page=@agent.get(url)
-        page=@agent.get(url) if authenticate?
-        page.links.each do |l|
-          @agent.log.debug("Link found: #{l.href}") if debug?
-          links << l.href
-        end
-      rescue Mechanize::UnauthorizedError
-        return {:status=>'KO', :links=>[], :message=>'target website requires authentication'}
-      rescue => e 
-        return {:status=>'KO', :links=>links, :message=>e.to_s}
-      end
-
-      return {:status=>'OK', :links=>links, :message=>''}
-    end
+    #   return {:status=>'OK', :links=>links, :message=>''}
+    # end
 
     def inject(url)
       start if @agent.nil?

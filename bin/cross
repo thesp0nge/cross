@@ -29,16 +29,19 @@ options = {:exploit_url=>false,
   :oneshot=>false, 
   :sample_post=>"", 
   :parameter_to_tamper=>"", 
-  :crawl=>{:enabled=>false, :url_prefix=>nil}, 
-  :auth=>{:username=>nil, :password=>nil}
+  :auth=>{:username=>nil, :password=>nil},
+  :target=>""
 }
 
 opts.each do |opt, arg| 
   case opt
   when '--help'
-    puts "usage: cross [-uDhv] target"
-    puts "     -u: exploits the URL string instead of looking at the form values"
+    puts "usage: cross [-D1StucUPhv] target"
     puts "     -D: turns debug on"
+    puts "     -1: random select a XSS attack pattern"
+    puts "     -S arg: when tampering posts, arg is a valid POST body used as reference. It can be also a text file containg the POST parameters."
+    puts "     -t arg: tells cross to tamper the given parameter. It must be used with -S flag turned on"
+    puts "     -u: exploits the URL string instead of looking at the form values"
     puts "     -v: shows version"
     puts "     -h: this help"
     exit 0
@@ -57,10 +60,8 @@ opts.each do |opt, arg|
     options[:debug]=true
   when '--exploit-url'
     options[:exploit_url]=true
-
   when '--crawl'
-    options[:crawl][:enabled]=true
-    options[:crawl][:url_prefix] = arg unless arg.nil?
+    $logger.die "deprecated. codesake-crawler must be used instead"
   when '--user'
     options[:auth][:username]=arg
   when '--password'
@@ -68,30 +69,32 @@ opts.each do |opt, arg|
   end
 end
 
+$logger.die "missing target" if ARGV.length != 1
+$logger.die "-S and -t flag must be used together" if (options[:sample_post].empty? && ! options[:parameter_to_tamper].empty?) or (! options[:sample_post].empty? && options[:parameter_to_tamper].empty?)
+
 $logger.helo "cross " + Cross::VERSION + " is starting up"
 
+options[:target] = ARGV.shift
 engine = Cross::Engine.instance
 engine.start(options)
 
 found = false
-$logger.die "missing target" if ARGV.length != 1
-$logger.die "-S and -t flag must be used together" if (options[:sample_post].empty? && ! options[:parameter_to_tamper].empty?) or (! options[:sample_post].empty? && options[:parameter_to_tamper].empty?)
 
-if engine.crawl?
-  result = engine.crawl(ARGV.shift)
-  $logger.die result[:message] if result[:status] == 'KO'
-
-  
-  result[:links].each do |l|
-    $logger.log "Exploiting: #{options[:crawl][:url_prefix]+l}"
-
-    found = engine.inject(options[:crawl][:url_prefix]+l) 
-    $logger.ok "Canary found in output page. Suspected XSS" if found
-  end
-else
+# if engine.crawl?
+#   result = engine.crawl(ARGV.shift)
+#   $logger.die result[:message] if result[:status] == 'KO'
+# 
+#   
+#   result[:links].each do |l|
+#     $logger.log "Exploiting: #{options[:crawl][:url_prefix]+l}"
+# 
+#     found = engine.inject(options[:crawl][:url_prefix]+l) 
+#     $logger.ok "Canary found in output page. Suspected XSS" if found
+#   end
+# else
   found = engine.inject(ARGV.shift)
   $logger.ok "Canary found in output page. Suspected XSS" if found
-end
+# end
 
 $logger.err "Canary not found" if ! found
 $logger.helo "cross is leaving"
