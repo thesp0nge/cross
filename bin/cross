@@ -80,21 +80,15 @@ engine.start(options)
 
 found = false
 
-# if engine.crawl?
-#   result = engine.crawl(ARGV.shift)
-#   $logger.die result[:message] if result[:status] == 'KO'
-# 
-#   
-#   result[:links].each do |l|
-#     $logger.log "Exploiting: #{options[:crawl][:url_prefix]+l}"
-# 
-#     found = engine.inject(options[:crawl][:url_prefix]+l) 
-#     $logger.ok "Canary found in output page. Suspected XSS" if found
-#   end
-# else
-  found = engine.inject(ARGV.shift)
-  $logger.ok "Canary found in output page. Suspected XSS" if found
-# end
+engine.inject
+unless engine.results.empty?
 
-$logger.err "Canary not found" if ! found
+$logger.ok "Canary found in output page. Suspected XSS" 
+engine.results.each do |res|
+  $logger.log res[:evidence]
+end
+end
+
+
+$logger.err "Canary not found" if engine.results.empty?
 $logger.helo "cross is leaving"

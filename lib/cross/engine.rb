@@ -14,11 +14,9 @@ module Cross
     attr_reader   :agent
     attr_accessor :options
     attr_reader   :results
+    attr_reader   :target
 
-    def debug?
-      @options[:debug]
-    end
-
+    
     def create_log_filename(target)
       begin
         return "cross_#{URI.parse(target).hostname.gsub('.', '_')}_#{Time.now.strftime("%Y%m%d")}.log"
@@ -29,16 +27,15 @@ module Cross
 
     # Starts the engine
     def start(options = {:exploit_url=>false, :debug=>false, :oneshot=>false, :sample_post=>"", :parameter_to_tamper=>"", :auth=>{:username=>nil, :password=>nil}, :target=>""})
-      @agent = Mechanize.new {|a| a.log = Logger.new(create_log_filename(option[:target]))}
+      @agent = Mechanize.new {|a| a.log = Logger.new(create_log_filename(options[:target]))}
       @agent.user_agent_alias = 'Mac Safari'
       @agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       @options = options
+      @target = options[:target]
+      @results = {}
     end 
 
-    def authenticate?
-      ! @options[:auth].nil?  and ! @options[:auth].empty? 
-    end
-
+    
     # def crawl(url)
     #   start if @agent.nil?
 
@@ -60,40 +57,29 @@ module Cross
     #   return {:status=>'OK', :links=>links, :message=>''}
     # end
 
-    def inject(url)
+    def inject
       start if @agent.nil?
 
-      $logger.log "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}" if debug?
+      $logger.log "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}" if debug? && authenticate?
 
-      @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
+      @agent.add_auth(@target, @options[:auth][:username], @options[:auth][:password]) if authenticate?
 
-      found = false
       if @options[:exploit_url]
         # You ask to exploit the url, so I won't check for form values
 
-        attack_url = Cross::Url.new(url)
+        theurl= Cross::Url.new(@target)
 
-        Cross::Attack::XSS.each do |pattern|
-          attack_url.params.each do |par|
+        attack_url(theurl, Cross::Attack::XSS.rand) if oneshot?
 
-            page = @agent.get(attack_url.fuzz(par[:name],pattern))
-            @agent.log.debug(page.body) if debug?
-
-            scripts = page.search("//script")
-            scripts.each do |sc|
-              $logger.log(page.body) if @options[:debug] if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
-              return true if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
-            end
-
-            return false if options[:oneshot]
-
-            attack_url.reset
+        if ! oneshot?
+          Cross::Attack::XSS.each do |pattern|
+            attack_url(theurl, pattern)
           end
         end
 
       else
         begin
-          page = @agent.get(url)
+          page = @agent.get(@target)
         rescue Mechanize::UnauthorizedError
           $logger.err 'Authentication failed. Giving up.'
           return false
@@ -105,48 +91,112 @@ module Cross
           return false
         end
 
-        $logger.log "#{page.forms.size} form(s) found" if debug?
+        
+        if page.forms.size == 0
+          $logger.log "no forms found, please try to exploit #{@target} with the -u flag"
+          return false
+        else
+          $logger.log "#{page.forms.size} form(s) found" if debug?
+        end
+        attack_form(page, Cross::Attack::XSS.rand) if oneshot?
 
-        Cross::Attack::XSS.each do |pattern|
-
-          $logger.log "using attack vector: #{pattern}" if debug?
-
-
-          page.forms.each do |f|
-            f.fields.each do |ff|
-              if  options[:sample_post].empty?
-                ff.value = pattern if options[:parameter_to_tamper].empty?
-                ff.value = pattern if ! options[:parameter_to_tamper].empty? && ff.name==options[:parameter_to_tamper]
-              else
-                ff.value = find_sample_value_for(options[:sample_post], ff.name) unless ff.name==options[:parameter_to_tamper]
-                ff.value = pattern if ff.name==options[:parameter_to_tamper]
-
-              end
-            end
-
-            pp = @agent.submit(f)
-            $logger.log "header: #{pp.header}" if debug? && ! pp.header.empty?
-            $logger.log "body: #{pp.body}" if debug? && ! pp.body.empty?
-            $logger.err "Page is empty" if pp.body.empty?
-            scripts = pp.search("//script")
-            scripts.each do |sc|
-              return true if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
-            end
-
-            # This is for input html field javascript event evasion
-            inputs = pp.search("//input")
-            inputs.each do |input|
-              return true if ! input['onmouseover'].nil? && input['onmouseover'].include?("alert(#{Cross::Attack::XSS::CANARY})") 
-            end
-          end 
-          return false if options[:oneshot]
+        if ! oneshot?
+          Cross::Attack::XSS.each do |pattern|
+            attack_form(page, pattern)
+          end
         end
       end
-      found
+      @results.empty?
     end
 
 
     private
+
+    def oneshot?
+      @options[:oneshot]
+    end
+
+    def debug?
+      @options[:debug]
+    end
+    def authenticate?
+      ! ( @options[:auth][:username].nil?  &&  @options[:auth][:password].nil? )
+    end
+
+    def attack_url(url = Cross::Url.new, pattern)
+      $logger.log "using attack vector: #{pattern}" if debug?
+      url.params.each do |par|
+
+        page = @agent.get(url.fuzz(par[:name],pattern))
+        @agent.log.debug(page.body) if debug?
+
+        scripts = page.search("//script")
+        scripts.each do |sc|
+          if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
+            $logger.log(page.body) if @debug
+            @results << {:page=>page.url, :method=>:get, :evidence=>sc.children.text, :param=>par}
+
+            return true 
+          end
+        end
+
+        inputs = page.search("//input")
+        inputs.each do |input|
+          if ! input['onmouseover'].nil? && input['onmouseover'].include?("alert(#{Cross::Attack::XSS::CANARY})")
+            $logger.log(page.body) if @debug
+            @results << {:page=>page.url, :method=>:get, :evidence=>input['onmouseover'], :param=>par}
+            return true  
+          end
+        end
+
+        url.reset
+      end
+
+      false
+    end
+
+    def attack_form(page = Mechanize::Page.new, pattern)
+      $logger.log "using attack vector: #{pattern}" if debug?
+
+      page.forms.each do |f|
+        f.fields.each do |ff|
+          if  options[:sample_post].empty?
+            ff.value = pattern if options[:parameter_to_tamper].empty?
+            ff.value = pattern if ! options[:parameter_to_tamper].empty? && ff.name==options[:parameter_to_tamper]
+          else
+            ff.value = find_sample_value_for(options[:sample_post], ff.name) unless ff.name==options[:parameter_to_tamper]
+            ff.value = pattern if ff.name==options[:parameter_to_tamper]
+
+          end
+        end
+
+        pp = @agent.submit(f)
+        $logger.log "header: #{pp.header}" if debug? && ! pp.header.empty?
+        $logger.log "body: #{pp.body}" if debug? && ! pp.body.empty?
+        $logger.err "Page is empty" if pp.body.empty?
+        scripts = pp.search("//script")
+        scripts.each do |sc|
+          if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
+            $logger.log(page.body) if @debug
+            @results << {:page=>page.url, :method=>:post, :evidence=>sc.children.text}
+            return true 
+          end
+        end
+
+        # This is for input html field javascript event evasion
+        inputs = pp.search("//input")
+        inputs.each do |input|
+          if ! input['onmouseover'].nil? && input['onmouseover'].include?("alert(#{Cross::Attack::XSS::CANARY})")
+            $logger.log(page.body) if @debug
+            @results << {:page=>page.url, :method=>:post, :evidence=> input['onmouseover']}
+            return true  
+          end
+        end
+      end 
+
+      false
+    end
+
     def find_sample_value_for(sample, name)
       v=sample.split('&')
       v.each do |post_param|

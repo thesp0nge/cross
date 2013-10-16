@@ -11,17 +11,19 @@ module Cross
       @params = []
       @original_params = []
       @base_url = url.split('?')[0]
-      p_array = url.split('?')[1].split('&')
-      p_array.each do |p|
-        pp = p.split('=')
-        param = {}
-        param[:name] = pp[0]
-        param[:value] = pp[1] unless pp[1].nil?
+      if has_params?
+        p_array = url.split('?')[1].split('&')
+        p_array.each do |p|
+          pp = p.split('=')
+          param = {}
+          param[:name] = pp[0]
+          param[:value] = pp[1] unless pp[1].nil?
 
-        @params << param
-        @original_params  << param.dup
+          @params << param
+          @original_params  << param.dup
+        end
+        @original_params.freeze
       end
-      @original_params.freeze
     end
 
     def to_s
@@ -54,6 +56,9 @@ module Cross
       end
     end
 
+    def has_params?
+      ! @url.split('?')[1].nil?
+    end
     def params_to_url
       ret = ""
       @params.each do |p|
