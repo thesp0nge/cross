@@ -90,4 +90,4 @@ end
 
 
 $logger.err "Canary not found" if engine.results.empty?
-$logger.helo "cross is leaving"
+$logger.bye 
