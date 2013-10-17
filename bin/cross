@@ -8,7 +8,6 @@ require 'getoptlong'
 require 'codesake-commons'
 
 $logger = Codesake::Commons::Logging.instance
-$logger.toggle_syslog
 
 opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
@@ -69,10 +68,10 @@ opts.each do |opt, arg|
   end
 end
 
+$logger.helo "cross", Cross::VERSION 
 $logger.die "missing target" if ARGV.length != 1
 $logger.die "-S and -t flag must be used together" if (options[:sample_post].empty? && ! options[:parameter_to_tamper].empty?) or (! options[:sample_post].empty? && options[:parameter_to_tamper].empty?)
 
-$logger.helo "cross " + Cross::VERSION + " is starting up"
 
 options[:target] = ARGV.shift
 engine = Cross::Engine.instance
