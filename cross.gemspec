@@ -23,5 +23,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency "logger"
   gem.add_dependency "rainbow"
 
-  gem.add_dependency "codesake-commons"
+  gem.add_dependency "codesake-commons", ">= 0.89.0"
 end

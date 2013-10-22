@@ -32,7 +32,7 @@ module Cross
       @agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       @options = options
       @target = options[:target]
-      @results = {}
+      @results = []
     end 
 
     
@@ -178,7 +178,7 @@ module Cross
         scripts.each do |sc|
           if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
             $logger.log(page.body) if @debug
-            @results << {:page=>page.url, :method=>:post, :evidence=>sc.children.text}
+            @results << {:page=>page.uri.to_s, :method=>:post, :evidence=>sc.children.text}
             return true 
           end
         end
@@ -188,7 +188,7 @@ module Cross
         inputs.each do |input|
           if ! input['onmouseover'].nil? && input['onmouseover'].include?("alert(#{Cross::Attack::XSS::CANARY})")
             $logger.log(page.body) if @debug
-            @results << {:page=>page.url, :method=>:post, :evidence=> input['onmouseover']}
+            @results << {:page=>page.uri.to_s, :method=>:post, :evidence=> input['onmouseover']}
             return true  
           end
         end
