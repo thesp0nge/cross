@@ -69,6 +69,7 @@ opts.each do |opt, arg|
 end
 
 $logger.helo "cross", Cross::VERSION 
+$logger.toggle_syslog
 $logger.die "missing target" if ARGV.length != 1
 $logger.die "-S and -t flag must be used together" if (options[:sample_post].empty? && ! options[:parameter_to_tamper].empty?) or (! options[:sample_post].empty? && options[:parameter_to_tamper].empty?)
 
