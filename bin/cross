@@ -81,14 +81,14 @@ engine.start(options)
 found = false
 
 engine.inject
+$logger.log "#{Cross::Attack::XSS.count} attack payloads sent"
+
 unless engine.results.empty?
-
-$logger.ok "Canary found in output page. Suspected XSS" 
-engine.results.each do |res|
-  $logger.log res[:evidence]
+  $logger.ok "Canary found in output page. Suspected XSS" 
+  engine.results.each do |res|
+    $logger.log res[:evidence]
+  end
 end
-end
-
 
 $logger.err "Canary not found" if engine.results.empty?
 $logger.bye 

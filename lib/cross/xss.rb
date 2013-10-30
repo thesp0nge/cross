@@ -72,6 +72,9 @@ module Cross
         Cross::Attack::XSS::EVASIONS[SecureRandom.random_number(Cross::Attack::XSS::EVASIONS.size)]
       end
 
+      def self.count
+        Cross::Attack::XSS::EVASIONS.count
+      end
 
       def self.each
         Cross::Attack::XSS::EVASIONS.each do |pattern|

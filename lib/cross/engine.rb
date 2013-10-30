@@ -1,7 +1,6 @@
 require 'mechanize'
 require 'logger'
 require 'singleton'
-require 'URI'
 
 require 'cross/xss'
 
