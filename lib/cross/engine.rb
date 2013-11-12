@@ -27,7 +27,7 @@ module Cross
     # Starts the engine
     def start(options = {:exploit_url=>false, :debug=>false, :oneshot=>false, :sample_post=>"", :parameter_to_tamper=>"", :auth=>{:username=>nil, :password=>nil}, :target=>""})
       @agent = Mechanize.new {|a| a.log = Logger.new(create_log_filename(options[:target]))}
-      @agent.user_agent_alias = 'Mac Safari'
+      @agent.user_agent = "cross v#{Cross::VERSION}"
       @agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       @options = options
       @target = options[:target]
