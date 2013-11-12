@@ -66,7 +66,7 @@ module Cross
       if @options[:exploit_url]
         # You ask to exploit the url, so I won't check for form values
 
-        theurl= Cross::Url.new(@target)
+        theurl= Codesake::Core::Url.new(@target)
 
         attack_url(theurl, Cross::Attack::XSS.rand) if oneshot?
 
@@ -122,7 +122,7 @@ module Cross
       ! ( @options[:auth][:username].nil?  &&  @options[:auth][:password].nil? )
     end
 
-    def attack_url(url = Cross::Url.new, pattern)
+    def attack_url(url = Codesake::Core::Url.new, pattern)
       $logger.log "using attack vector: #{pattern}" if debug?
       url.params.each do |par|
 
