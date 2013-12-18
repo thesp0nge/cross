@@ -68,7 +68,7 @@ opts.each do |opt, arg|
   when '--password'
     options[:auth][:password]=arg
   when '--evasion'
-    Cross::Attack::XSS::EVASION.each do |evasion|
+    Cross::Attack::XSS::EVASIONS.each do |evasion|
       $logger.log evasion
     end
   end
