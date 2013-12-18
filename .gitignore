@@ -1,4 +1,5 @@
-*.swp
+*.txt
+*.sw?
 *.log
 *.gem
 *.rbc
