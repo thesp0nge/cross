@@ -15,7 +15,7 @@ module Cross
     attr_reader   :results
     attr_reader   :target
 
-    
+
     def create_log_filename(target)
       begin
         return "cross_#{URI.parse(target).hostname.gsub('.', '_')}_#{Time.now.strftime("%Y%m%d")}.log"
@@ -34,7 +34,7 @@ module Cross
       @results = []
     end 
 
-    
+
     # def crawl(url)
     #   start if @agent.nil?
 

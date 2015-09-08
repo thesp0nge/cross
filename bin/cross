@@ -5,9 +5,9 @@ require 'logger'
 require 'mechanize'
 require 'cross'
 require 'getoptlong'
-require 'codesake-commons'
 
-$logger = Codesake::Commons::Logging.instance
+$logger = Logger.new(STDOUT)
+$logger.datetime_format = '%Y-%m-%d %H:%M:%S'
 
 opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
@@ -23,16 +23,14 @@ opts = GetoptLong.new(
 )
 trap("INT") { $logger.die "SIGINT detected. Giving up" }
 
-options = {:exploit_url=>false, 
-  :debug=>false, 
-  :oneshot=>false, 
-  :sample_post=>"", 
-  :parameter_to_tamper=>"", 
-  :auth=>{:username=>nil, :password=>nil},
-  :target=>""
+options = {:exploit_url=>false, :debug=>false, :oneshot=>false,
+           :sample_post=>"",
+           :parameter_to_tamper=>"",
+           :auth=>{:username=>nil, :password=>nil},
+           :target=>"" 
 }
 
-opts.each do |opt, arg| 
+opts.each do |opt, arg|
   case opt
   when '--help'
     puts "usage: cross [-D1StucUPhv] target"
@@ -45,7 +43,7 @@ opts.each do |opt, arg|
     puts "     -h: this help"
     exit 0
   when '--version'
-    puts "cross " + Cross::VERSION + " (C) 2011, 2012 - paolo@armoredcode.com"
+    puts "cross " + Cross::VERSION + " (C) 2011-2015 <paolo@codiceinsicuro.it>"
     exit 0
   when '--oneshot'
     options[:oneshot] = true

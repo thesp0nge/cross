@@ -3,7 +3,6 @@ require 'securerandom'
 module Cross
   module Attack
     class XSS
-
       CANARY = 666
       EVASIONS = [
           "a onmouseover=alert(#{Cross::Attack::XSS::CANARY})",
