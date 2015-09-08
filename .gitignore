@@ -1,5 +1,7 @@
 .DS_Store
 *.swp
+*.txt
+*.sw?
 *.log
 *.gem
 *.rbc

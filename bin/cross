@@ -14,6 +14,7 @@ opts = GetoptLong.new(
   [ '--version', '-v', GetoptLong::NO_ARGUMENT ],
   ['--debug', '-D', GetoptLong::NO_ARGUMENT ],
   ['--oneshot', '-1', GetoptLong::NO_ARGUMENT ],
+  ['--evasion', '-e', GetoptLong::NO_ARGUMENT ],
   ['--sample-post', '-S', GetoptLong::REQUIRED_ARGUMENT ],
   ['--tamper', '-t', GetoptLong::REQUIRED_ARGUMENT ],
   ['--exploit-url', '-u', GetoptLong::NO_ARGUMENT ],
@@ -36,6 +37,7 @@ opts.each do |opt, arg|
     puts "usage: cross [-D1StucUPhv] target"
     puts "     -D: turns debug on"
     puts "     -1: random select a XSS attack pattern"
+    puts "     -e: list evasion list"
     puts "     -S arg: when tampering posts, arg is a valid POST body used as reference. It can be also a text file containg the POST parameters."
     puts "     -t arg: tells cross to tamper the given parameter. It must be used with -S flag turned on"
     puts "     -u: exploits the URL string instead of looking at the form values"
@@ -63,6 +65,10 @@ opts.each do |opt, arg|
     options[:auth][:username]=arg
   when '--password'
     options[:auth][:password]=arg
+  when '--evasion'
+    Cross::Attack::XSS::EVASIONS.each do |evasion|
+      $logger.log evasion
+    end
   end
 end
 

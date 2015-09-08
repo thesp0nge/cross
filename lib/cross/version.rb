@@ -1,3 +1,3 @@
 module Cross
-  VERSION = "0.71.0"
+  VERSION = "0.76.0"
 end
