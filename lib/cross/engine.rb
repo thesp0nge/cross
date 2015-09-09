@@ -25,7 +25,7 @@ module Cross
     end
 
     # Starts the engine
-    def start(options = {:exploit_url=>false, :debug=>false, :oneshot=>false, :sample_post=>"", :parameter_to_tamper=>"", :auth=>{:username=>nil, :password=>nil}, :target=>""})
+    def start(options = {:exploit_url=>false, :debug=>false, :oneshot=>false, :sample_post=>"", :parameter_to_tamper=>"", :auth=>{:username=>nil, :password=>nil}, :target=>"", :crawl=>false})
       @agent = Mechanize.new {|a| a.log = Logger.new(create_log_filename(options[:target]))}
       @agent.user_agent = "cross v#{Cross::VERSION}"
       @agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
@@ -35,34 +35,54 @@ module Cross
     end 
 
 
-    # def crawl(url)
-    #   start if @agent.nil?
+    # FIXME: this crawler iterates only a single page.
+    def crawl
+      start if @agent.nil?
 
-    #   links = []
-    #   @agent.add_auth(url, @options[:auth][:username], @options[:auth][:password]) if authenticate?
-    #   begin 
-    #     page=@agent.get(url)
-    #     page=@agent.get(url) if authenticate?
-    #     page.links.each do |l|
-    #       @agent.log.debug("Link found: #{l.href}") if debug?
-    #       links << l.href
-    #     end
-    #   rescue Mechanize::UnauthorizedError
-    #     return {:status=>'KO', :links=>[], :message=>'target website requires authentication'}
-    #   rescue => e 
-    #     return {:status=>'KO', :links=>links, :message=>e.to_s}
-    #   end
-
-    #   return {:status=>'OK', :links=>links, :message=>''}
-    # end
+      links = []
+      @agent.add_auth(@target, @options[:auth][:username], @options[:auth][:password]) if authenticate?
+      begin 
+        page=@agent.get(@target)
+        page=@agent.get(@target) if authenticate?
+        page.links.each do |l|
+          @agent.log.debug("Link found: #{l.href}") if debug?
+          links << Codesake::Core::Url.new(l.href)
+        end
+      rescue Mechanize::UnauthorizedError
+        return {:status=>'KO', :links=>[], :message=>'target website requires authentication'}
+      rescue => e
+        return {:status=>'KO', :links=>links, :message=>e.to_s}
+      end
+      return {:status=>'OK', :links=>links, :message=>''}
+    end
 
     def inject
       start if @agent.nil?
 
-      $logger.log "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}" if debug? && authenticate?
+      $logger.info "Authenticating to the app using #{@options[:auth][:username]}:#{@options[:auth][:password]}" if debug? && authenticate?
 
       @agent.add_auth(@target, @options[:auth][:username], @options[:auth][:password]) if authenticate?
 
+      if @options[:crawl]
+        # You ask to crawl a website. cross will collect urls and then iterate
+        # XSS evasions.
+        h = crawl
+        status = h[:status]
+        links = h[:links]
+        message = h[:message]
+        $logger.debug("crawl status: #{status}")
+        $logger.debug("links found: #{links}")
+        $logger.debug("message: #{message}")
+        links.each do |l|
+          $logger.debug("attacking url: #{l.base_url}")
+          attack_url(l, Cross::Attack::XSS.rand) if oneshot?
+          if ! oneshot?
+            Cross::Attack::XSS.each do |pattern|
+              attack_url(l, pattern)
+            end
+          end
+        end
+      end
       if @options[:exploit_url]
         # You ask to exploit the url, so I won't check for form values
 
@@ -90,12 +110,11 @@ module Cross
           return false
         end
 
-        
         if page.forms.size == 0
-          $logger.log "no forms found, please try to exploit #{@target} with the -u flag"
+          $logger.info "no forms found, please try to exploit #{@target} with the -u flag"
           return false
         else
-          $logger.log "#{page.forms.size} form(s) found" if debug?
+          $logger.info "#{page.forms.size} form(s) found" if debug?
         end
         attack_form(page, Cross::Attack::XSS.rand) if oneshot?
 
@@ -123,7 +142,7 @@ module Cross
     end
 
     def attack_url(url = Codesake::Core::Url.new, pattern)
-      $logger.log "using attack vector: #{pattern}" if debug?
+      $logger.info "using attack vector: #{pattern}" if debug?
       url.params.each do |par|
 
         page = @agent.get(url.fuzz(par[:name],pattern))
@@ -132,7 +151,7 @@ module Cross
         scripts = page.search("//script")
         scripts.each do |sc|
           if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
-            $logger.log(page.body) if @debug
+            $logger.info(page.body) if @debug
             @results << {:page=>page.url, :method=>:get, :evidence=>sc.children.text, :param=>par}
 
             return true 
@@ -142,7 +161,7 @@ module Cross
         inputs = page.search("//input")
         inputs.each do |input|
           if ! input['onmouseover'].nil? && input['onmouseover'].include?("alert(#{Cross::Attack::XSS::CANARY})")
-            $logger.log(page.body) if @debug
+            $logger.info(page.body) if @debug
             @results << {:page=>page.url, :method=>:get, :evidence=>input['onmouseover'], :param=>par}
             return true  
           end
@@ -155,7 +174,7 @@ module Cross
     end
 
     def attack_form(page = Mechanize::Page.new, pattern)
-      $logger.log "using attack vector: #{pattern}" if debug?
+      $logger.info "using attack vector: #{pattern}" if debug?
 
       page.forms.each do |f|
         f.fields.each do |ff|
@@ -170,13 +189,13 @@ module Cross
         end
 
         pp = @agent.submit(f)
-        $logger.log "header: #{pp.header}" if debug? && ! pp.header.empty?
-        $logger.log "body: #{pp.body}" if debug? && ! pp.body.empty?
+        $logger.info "header: #{pp.header}" if debug? && ! pp.header.empty?
+        $logger.info "body: #{pp.body}" if debug? && ! pp.body.empty?
         $logger.err "Page is empty" if pp.body.empty?
         scripts = pp.search("//script")
         scripts.each do |sc|
           if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
-            $logger.log(page.body) if @debug
+            $logger.info(page.body) if @debug
             @results << {:page=>page.uri.to_s, :method=>:post, :evidence=>sc.children.text}
             return true 
           end
@@ -186,7 +205,7 @@ module Cross
         inputs = pp.search("//input")
         inputs.each do |input|
           if ! input['onmouseover'].nil? && input['onmouseover'].include?("alert(#{Cross::Attack::XSS::CANARY})")
-            $logger.log(page.body) if @debug
+            $logger.info(page.body) if @debug
             @results << {:page=>page.uri.to_s, :method=>:post, :evidence=> input['onmouseover']}
             return true  
           end

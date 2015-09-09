@@ -18,22 +18,29 @@ opts = GetoptLong.new(
   ['--sample-post', '-S', GetoptLong::REQUIRED_ARGUMENT ],
   ['--tamper', '-t', GetoptLong::REQUIRED_ARGUMENT ],
   ['--exploit-url', '-u', GetoptLong::NO_ARGUMENT ],
-  ['--crawl', '-c', GetoptLong::OPTIONAL_ARGUMENT ], 
+  ['--crawl', '-c', GetoptLong::NO_ARGUMENT ],
   ['--user', '-U', GetoptLong::REQUIRED_ARGUMENT ],
   ['--password', '-P', GetoptLong::REQUIRED_ARGUMENT ]
 )
+opts.quiet=true
 trap("INT") { $logger.die "SIGINT detected. Giving up" }
 
 options = {:exploit_url=>false, :debug=>false, :oneshot=>false,
            :sample_post=>"",
            :parameter_to_tamper=>"",
            :auth=>{:username=>nil, :password=>nil},
-           :target=>"" 
+           :target=>"", :crawl=>false
 }
 
+begin
 opts.each do |opt, arg|
   case opt
   when '--help'
+    puts "cross " + Cross::VERSION + " (C) 2011-2015 <paolo@codiceinsicuro.it>"
+    puts ""
+    puts "cross is a tool to automate Cross Site Scripting discovery during a web application penetration test. It works best with reflected XSS."
+    puts ""
+    puts ""
     puts "usage: cross [-D1StucUPhv] target"
     puts "     -D: turns debug on"
     puts "     -1: random select a XSS attack pattern"
@@ -41,6 +48,7 @@ opts.each do |opt, arg|
     puts "     -S arg: when tampering posts, arg is a valid POST body used as reference. It can be also a text file containg the POST parameters."
     puts "     -t arg: tells cross to tamper the given parameter. It must be used with -S flag turned on"
     puts "     -u: exploits the URL string instead of looking at the form values"
+    puts "     -c: crawl the web application and discover urls to attack"
     puts "     -v: shows version"
     puts "     -h: this help"
     exit 0
@@ -60,38 +68,45 @@ opts.each do |opt, arg|
   when '--exploit-url'
     options[:exploit_url]=true
   when '--crawl'
-    $logger.die "deprecated. codesake-crawler must be used instead"
+    options[:crawl] = true
   when '--user'
     options[:auth][:username]=arg
   when '--password'
     options[:auth][:password]=arg
   when '--evasion'
     Cross::Attack::XSS::EVASIONS.each do |evasion|
-      $logger.log evasion
+      puts evasion.to_s
     end
+    exit 0
   end
 end
+rescue GetoptLong::InvalidOption => e
+  $logger.helo "cross", Cross::VERSION
+  $logger.error e.message
+  Kernel.exit(0)
+end
 
-$logger.helo "cross", Cross::VERSION 
-$logger.die "missing target" if ARGV.length != 1
+options[:target]=ARGV.shift
+
+$logger.helo "cross", Cross::VERSION
+$logger.die "missing target" if options[:target].nil?
 $logger.die "-S and -t flag must be used together" if (options[:sample_post].empty? && ! options[:parameter_to_tamper].empty?) or (! options[:sample_post].empty? && options[:parameter_to_tamper].empty?)
 
 
-options[:target] = ARGV.shift
 engine = Cross::Engine.instance
 engine.start(options)
 
 found = false
 
 engine.inject
-$logger.log "#{Cross::Attack::XSS.count} attack payloads sent"
+$logger.info "#{Cross::Attack::XSS.count} attack payloads sent"
 
 unless engine.results.empty?
   $logger.ok "Canary found in output page. Suspected XSS" 
   engine.results.each do |res|
-    $logger.log res[:evidence]
+    $logger.info res[:evidence]
   end
 end
 
-$logger.err "Canary not found" if engine.results.empty?
-$logger.bye 
+$logger.error "Canary not found" if engine.results.empty?
+$logger.bye
