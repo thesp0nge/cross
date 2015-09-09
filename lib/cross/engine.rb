@@ -35,13 +35,13 @@ module Cross
     end 
 
 
-    # FIXME: this crawler iterates only a single page.
+    # FIXME: this crawler iterates only a single page. We must handle crawling deep
     def crawl
       start if @agent.nil?
 
       links = []
       @agent.add_auth(@target, @options[:auth][:username], @options[:auth][:password]) if authenticate?
-      begin 
+      begin
         page=@agent.get(@target)
         page=@agent.get(@target) if authenticate?
         page.links.each do |l|
