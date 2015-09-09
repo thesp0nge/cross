@@ -12,5 +12,8 @@ class Logger
   def bye
     info "#{@app} is shutting down"
   end
+  def debug_me(msg)
+    debug(msg) if $debug
+  end
 
 end

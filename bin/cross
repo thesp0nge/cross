@@ -8,6 +8,7 @@ require 'getoptlong'
 
 $logger = Logger.new(STDOUT)
 $logger.datetime_format = '%Y-%m-%d %H:%M:%S'
+$debug = false
 
 opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
@@ -64,7 +65,7 @@ opts.each do |opt, arg|
     options[:sample_post] = arg unless File.exist?(arg)
     options[:sample_post] = File.read(arg) if File.exist?(arg) && File.readable?(arg)
   when '--debug'
-    options[:debug]=true
+    $debug=true
   when '--exploit-url'
     options[:exploit_url]=true
   when '--crawl'

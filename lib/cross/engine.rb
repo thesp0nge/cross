@@ -70,11 +70,11 @@ module Cross
         status = h[:status]
         links = h[:links]
         message = h[:message]
-        $logger.debug("crawl status: #{status}")
-        $logger.debug("links found: #{links}")
-        $logger.debug("message: #{message}")
+        $logger.debug_me("crawl status: #{status}")
+        $logger.debug_me("links found: #{links}")
+        $logger.debug_me("message: #{message}")
         links.each do |l|
-          $logger.debug("attacking url: #{l.base_url}")
+          $logger.debug_me("attacking url: #{l.base_url}")
           attack_url(l, Cross::Attack::XSS.rand) if oneshot?
           if ! oneshot?
             Cross::Attack::XSS.each do |pattern|
@@ -135,14 +135,14 @@ module Cross
     end
 
     def debug?
-      @options[:debug]
+      $debug
     end
     def authenticate?
       ! ( @options[:auth][:username].nil?  &&  @options[:auth][:password].nil? )
     end
 
     def attack_url(url = Codesake::Core::Url.new, pattern)
-      $logger.info "using attack vector: #{pattern}" if debug?
+      $logger.debug_me "using attack vector: #{pattern}"
       url.params.each do |par|
 
         page = @agent.get(url.fuzz(par[:name],pattern))
@@ -151,7 +151,7 @@ module Cross
         scripts = page.search("//script")
         scripts.each do |sc|
           if sc.children.text.include?("alert(#{Cross::Attack::XSS::CANARY})")
-            $logger.info(page.body) if @debug
+            $logger.debug_me(page.body)
             @results << {:page=>page.url, :method=>:get, :evidence=>sc.children.text, :param=>par}
 
             return true 
